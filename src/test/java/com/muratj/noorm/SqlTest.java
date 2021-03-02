@@ -3,6 +3,7 @@ package com.muratj.noorm;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SqlTest {
 
@@ -24,5 +25,10 @@ class SqlTest {
     void buildsQueryWithMultipleColumns() {
         String sql = db.select("id", "name").from("orders").build();
         assertEquals("SELECT id, name FROM orders", sql);
+    }
+
+    @Test
+    void rejectsHostileTableIdentifier() {
+        assertThrows(IllegalArgumentException.class, () -> db.select("*").from("users; DROP TABLE users"));
     }
 }

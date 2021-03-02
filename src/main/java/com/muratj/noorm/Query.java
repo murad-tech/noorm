@@ -17,7 +17,7 @@ final class Query implements SelectStep, FromStep {
 
     @Override
     public FromStep from(String table) {
-        return new Query(projection, table);
+        return new Query(projection, Identifiers.validate(table));
     }
 
     @Override
