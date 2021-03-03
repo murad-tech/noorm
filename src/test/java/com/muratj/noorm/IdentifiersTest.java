@@ -1,11 +1,13 @@
 package com.muratj.noorm;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /** Spec boundary: hostile identifiers never reach the SQL string. */
+@Tag("unit")
 class IdentifiersTest {
 
     @Test

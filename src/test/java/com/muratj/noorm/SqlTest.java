@@ -1,10 +1,13 @@
 package com.muratj.noorm;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/** Test select/from chain produces SQL. */
+@Tag("unit")
 class SqlTest {
 
     private final Sql db = new Sql();
