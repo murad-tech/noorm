@@ -1,5 +1,7 @@
 package com.muratj.noorm;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -8,9 +10,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /** Test select/from chain produces SQL. */
 @Tag("unit")
-class SqlTest {
+class DBTest {
 
-    private final Sql db = new Sql();
+    private static final String URL = "jdbc:h2:mem:noorm-unit;DB_CLOSE_DELAY=-1";
+
+    private DB db;
+
+    @BeforeEach
+    void newConnection() {
+        db = DB.connect(URL, "sa", "");
+    }
+
+    @AfterEach
+    void releaseConnection() {
+        db.close();
+    }
 
     @Test
     void buildsSelectFromQuery() {
