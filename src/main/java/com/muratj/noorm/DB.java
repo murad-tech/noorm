@@ -33,6 +33,12 @@ public final class DB implements AutoCloseable {
         return Query.withColumns(columns.length == 0 ? "*" : String.join(", ", columns), connection);
     }
 
+    /** Starts a CREATE TABLE against the connection; add columns via the step chain.
+     * @throws IllegalArgumentException when the table name is not a safe identifier */
+    public CreateTableStep createTable(String table) {
+        return TableQuery.create(Identifiers.validate(table), connection);
+    }
+
     @Override
     public void close() {
         try {
