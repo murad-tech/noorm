@@ -1,11 +1,14 @@
 package com.muratj.noorm;
 
+import java.sql.ResultSet;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /** createTable chain produces DDL SQL and runs it. */
@@ -58,10 +61,14 @@ class CreateTableTest {
     }
 
     @Test
-    void executesAgainstRealDatabase() {
+    void executesAgainstRealDatabase() throws Exception {
         db.createTable("users_ddl_test")
                 .column("name", "VARCHAR(50)")
                 .column("age", "INTEGER")
                 .execute();
+        // verification: the table exists — selecting from it succeeds and has no rows
+        try (ResultSet rs = db.select("*").from("users_ddl_test").execute()) {
+            assertFalse(rs.next());
+        }
     }
 }
