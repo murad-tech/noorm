@@ -39,6 +39,12 @@ public final class DB implements AutoCloseable {
         return TableQuery.create(Identifiers.validate(table), connection);
     }
 
+    /** Starts an INSERT into the table; add column/value pairs via the step chain.
+     * @throws IllegalArgumentException when the table name is not a safe identifier */
+    public InsertStep insertInto(String table) {
+        return InsertQuery.create(Identifiers.validate(table), connection);
+    }
+
     @Override
     public void close() {
         try {

@@ -1,12 +1,7 @@
 package com.muratj.noorm.integration;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -22,26 +17,27 @@ import com.muratj.noorm.DB;
 class SqlIntegrationTest {
 
     private static final String URL = "jdbc:h2:mem:noorm-it;DB_CLOSE_DELAY=-1";
-    private Connection seedConnection;
-    private Statement seedStatement;
 
     @BeforeEach
-    void seedUsers() throws SQLException {
-        // seed with raw SQL: noorm builds reads only
-        seedConnection = DriverManager.getConnection(URL, "sa", "");
-        seedStatement = seedConnection.createStatement();
-        seedStatement.execute("CREATE TABLE users (name VARCHAR(50), age INTEGER)");
-        seedStatement.execute("INSERT INTO users VALUES ('john', 30), ('ann', 42)");
-    }
-
-    @AfterEach
-    void teardownSeed() throws SQLException {
-        seedStatement.close();
-        seedConnection.close();
+    void seedUsers() {
+        try (DB seed = DB.connect(URL, "sa", "")) {
+            seed.createTable("users")
+                    .column("name", "VARCHAR(50)")
+                    .column("age", "INTEGER")
+                    .execute();
+            seed.insertInto("users")
+                    .value("name", "john")
+                    .value("age", 30)
+                    .execute();
+            seed.insertInto("users")
+                    .value("name", "ann")
+                    .value("age", 42)
+                    .execute();
+        }
     }
 
     @Test
-    void selectExecuteReturnsSeededRows() throws SQLException {
+    void selectExecuteReturnsSeededRows() throws Exception {
         try (DB db = DB.connect(URL, "sa", "");
              ResultSet rs = db.select("name", "age").from("users").execute()) {
             assertTrue(rs.next());
@@ -53,5 +49,4 @@ class SqlIntegrationTest {
             assertFalse(rs.next());
         }
     }
-
 }
