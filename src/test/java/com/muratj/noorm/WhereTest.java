@@ -89,6 +89,87 @@ class WhereTest {
     }
 
     @Test
+    void neGtGteLtLteProduceSymbols() {
+        assertEquals("SELECT * FROM users WHERE name <> 'john'",
+                db.select("*").from("users").where("name").ne("john").build());
+        assertEquals("SELECT * FROM users WHERE age > 30",
+                db.select("*").from("users").where("age").gt(30).build());
+        assertEquals("SELECT * FROM users WHERE age >= 30",
+                db.select("*").from("users").where("age").gte(30).build());
+        assertEquals("SELECT * FROM users WHERE age < 30",
+                db.select("*").from("users").where("age").lt(30).build());
+        assertEquals("SELECT * FROM users WHERE age <= 30",
+                db.select("*").from("users").where("age").lte(30).build());
+    }
+
+    @Test
+    void likeEscapesQuote() {
+        assertEquals("SELECT * FROM users WHERE name LIKE 'jo%'",
+                db.select("*").from("users").where("name").like("jo%").build());
+        assertEquals("SELECT * FROM users WHERE name LIKE 'O''Brien'",
+                db.select("*").from("users").where("name").like("O'Brien").build());
+    }
+
+    @Test
+    void notLikeProducesNotLike() {
+        String sql = db.select("*").from("users").where("name").notLike("jo%").build();
+        assertEquals("SELECT * FROM users WHERE name NOT LIKE 'jo%'", sql);
+    }
+
+    @Test
+    void inAcceptsMultipleValues() {
+        String sql = db.select("*").from("users").where("name").in("john", "ann").build();
+        assertEquals("SELECT * FROM users WHERE name IN ('john', 'ann')", sql);
+    }
+
+    @Test
+    void inWithNumbersUnquoted() {
+        String sql = db.select("*").from("users").where("age").in(30, 42).build();
+        assertEquals("SELECT * FROM users WHERE age IN (30, 42)", sql);
+    }
+
+    @Test
+    void notInProducesNot() {
+        String sql = db.select("*").from("users").where("name").notIn("john").build();
+        assertEquals("SELECT * FROM users WHERE name NOT IN ('john')", sql);
+    }
+
+    @Test
+    void emptyInRejected() {
+        assertThrows(IllegalArgumentException.class, () -> db.select("*").from("users").where("name").in());
+    }
+
+    @Test
+    void betweenProducesBetween() {
+        String sql = db.select("*").from("users").where("age").between(20, 40).build();
+        assertEquals("SELECT * FROM users WHERE age BETWEEN 20 AND 40", sql);
+    }
+
+    @Test
+    void notBetweenProducesNot() {
+        String sql = db.select("*").from("users").where("age").notBetween(20, 40).build();
+        assertEquals("SELECT * FROM users WHERE age NOT BETWEEN 20 AND 40", sql);
+    }
+
+    @Test
+    void isNullAndIsNotNull() {
+        assertEquals("SELECT * FROM users WHERE name IS NULL",
+                db.select("*").from("users").where("name").isNull().build());
+        assertEquals("SELECT * FROM users WHERE name IS NOT NULL",
+                db.select("*").from("users").where("name").isNotNull().build());
+    }
+
+    @Test
+    void operatorsMixWithAnd() {
+        String sql = db.select("*").from("users")
+                .where("name").notIn("john")
+                .and("age").between(20, 40)
+                .and("city").isNotNull()
+                .build();
+        assertEquals("SELECT * FROM users WHERE name NOT IN ('john') AND age BETWEEN 20 AND 40 AND city IS NOT NULL", sql);
+    }
+
+    @Test
     void executesWhereAndFiltersRows() throws Exception {
         db.createTable("where_test")
                 .column("name", "VARCHAR(50)")

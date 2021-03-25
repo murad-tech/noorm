@@ -49,7 +49,100 @@ final class Query implements SelectStep, FromStep, WhereStep, ConditionReady {
 
     @Override
     public ConditionReady eq(Object value) {
-        String condition = pendingColumn + " = " + Values.literal(value);
+        return condition("=", value);
+    }
+
+    @Override
+    public ConditionReady ne(Object value) {
+        return condition("<>", value);
+    }
+
+    @Override
+    public ConditionReady gt(Object value) {
+        return condition(">", value);
+    }
+
+    @Override
+    public ConditionReady gte(Object value) {
+        return condition(">=", value);
+    }
+
+    @Override
+    public ConditionReady lt(Object value) {
+        return condition("<", value);
+    }
+
+    @Override
+    public ConditionReady lte(Object value) {
+        return condition("<=", value);
+    }
+
+    @Override
+    public ConditionReady like(Object value) {
+        return condition("LIKE", value);
+    }
+
+    @Override
+    public ConditionReady notLike(Object value) {
+        return condition("NOT LIKE", value);
+    }
+
+    @Override
+    public ConditionReady in(Object... values) {
+        return inCondition(true, values);
+    }
+
+    @Override
+    public ConditionReady notIn(Object... values) {
+        return inCondition(false, values);
+    }
+
+    @Override
+    public ConditionReady between(Object low, Object high) {
+        return betweenCondition(true, low, high);
+    }
+
+    @Override
+    public ConditionReady notBetween(Object low, Object high) {
+        return betweenCondition(false, low, high);
+    }
+
+    @Override
+    public ConditionReady isNull() {
+        return finish(pendingColumn + " IS NULL");
+    }
+
+    @Override
+    public ConditionReady isNotNull() {
+        return finish(pendingColumn + " IS NOT NULL");
+    }
+
+    private ConditionReady condition(String operator, Object value) {
+        return finish(pendingColumn + " " + operator + " " + Values.literal(value));
+    }
+
+    private ConditionReady inCondition(boolean positive, Object[] values) {
+        if (values.length == 0) {
+            throw new IllegalArgumentException("IN needs at least one value");
+        }
+        StringBuilder literals = new StringBuilder();
+        for (int i = 0; i < values.length; i++) {
+            if (i > 0) {
+                literals.append(", ");
+            }
+            literals.append(Values.literal(values[i]));
+        }
+        String operator = positive ? "IN" : "NOT IN";
+        return finish(pendingColumn + " " + operator + " (" + literals + ")");
+    }
+
+    private ConditionReady betweenCondition(boolean positive, Object low, Object high) {
+        String keyword = positive ? "BETWEEN" : "NOT BETWEEN";
+        return finish(pendingColumn + " " + keyword + " " + Values.literal(low)
+                + " AND " + Values.literal(high));
+    }
+
+    private ConditionReady finish(String condition) {
         String joined = conditions == null ? condition : conditions + " AND " + condition;
         return copy(table, joined, null);
     }
