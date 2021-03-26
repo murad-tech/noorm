@@ -36,7 +36,12 @@ public final class DB implements AutoCloseable {
     /** Starts a CREATE TABLE against the connection; add columns via the step chain.
      * @throws IllegalArgumentException when the table name is not a safe identifier */
     public CreateTableStep createTable(String table) {
-        return TableQuery.create(Identifiers.validate(table), connection);
+        return TableQuery.create(Identifiers.validate(table), connection, false);
+    }
+
+    /** Like {@link #createTable} but the executed SQL tolerates an existing table. */
+    public CreateTableStep createTableIfNotExists(String table) {
+        return TableQuery.create(Identifiers.validate(table), connection, true);
     }
 
     /** Starts an INSERT into the table; add column/value pairs via the step chain.

@@ -21,7 +21,7 @@ class SqlIntegrationTest {
     @BeforeEach
     void seedUsers() {
         try (DB seed = DB.connect(URL, "sa", "")) {
-            seed.createTable("users")
+            seed.createTableIfNotExists("users")
                     .column("name", "VARCHAR(50)")
                     .column("age", "INTEGER")
                     .execute();
