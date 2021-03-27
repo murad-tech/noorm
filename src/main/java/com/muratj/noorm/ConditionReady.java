@@ -8,6 +8,14 @@ public interface ConditionReady {
 
     WhereStep and(String column);
 
+    /** Adds an ORDER BY key; repeatable via {@link OrderReady#orderBy}.
+     * @throws IllegalArgumentException when the column name is not a safe identifier */
+    OrderReady orderBy(String column, Order order);
+
+    /** Adds LIMIT (single-use).
+     * @param n maximum number of rows, must be non-negative */
+    LimitReady limit(int n);
+
     /** Renders the select as a SQL string. */
     String build();
 

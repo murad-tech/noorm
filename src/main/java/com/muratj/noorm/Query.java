@@ -5,8 +5,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-/** Immutable clause state; validation scope grows with later tasks. */
-final class Query implements SelectStep, FromStep, WhereStep, ConditionReady {
+/** Immutable clause state; the fluent step interfaces gate which methods are
+ * legal at each point. */
+final class Query implements SelectStep, FromStep, WhereStep, ConditionReady,
+        OrderReady, LimitReady, OffsetReady {
 
     private final Connection connection;
     private final String projection;
@@ -14,37 +16,73 @@ final class Query implements SelectStep, FromStep, WhereStep, ConditionReady {
     private final String conditions;
     /** Set while a where/and column waits for its operator. */
     private final String pendingColumn;
+    /** Joined sort keys; null until the first orderBy. */
+    private final String ordering;
+    private final Integer limit;
+    private final Integer offset;
 
-    private Query(Connection connection, String projection, String table,
-                  String conditions, String pendingColumn) {
-        this.connection = connection;
-        this.projection = projection;
+    private Query(Connection connection,
+                  String projection,
+                  String table,
+                  String conditions,
+                  String pendingColumn,
+                  String ordering,
+                  Integer limit,
+                  Integer offset) {
+        this.connection = connection;               // SQL connection
+        this.projection = projection;               // list of columns or "*"
         this.table = table;
         this.conditions = conditions;
         this.pendingColumn = pendingColumn;
+        this.ordering = ordering;
+        this.limit = limit;
+        this.offset = offset;
     }
 
     static Query withColumns(String projection, Connection connection) {
-        return new Query(connection, projection, null, null, null);
+        return new Query(connection,
+                projection,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null);
     }
 
-    private Query copy(String table, String conditions, String pendingColumn) {
-        return new Query(connection, projection, table, conditions, pendingColumn);
+    private Query keep(String table, String conditions, String pendingColumn) {
+        return new Query(connection,
+                projection,
+                table,
+                conditions,
+                pendingColumn,
+                ordering,
+                limit,
+                offset);
+    }
+
+    private Query keepConditions(String pendingColumn) {
+        return keep(table, conditions, pendingColumn);
     }
 
     @Override
     public FromStep from(String table) {
-        return copy(Identifiers.validate(table), conditions, pendingColumn);
+        return keep(Identifiers.validate(table), conditions, pendingColumn);
     }
 
     @Override
     public WhereStep where(String column) {
-        return copy(table, conditions, Identifiers.validate(column));
+        return keepConditions(Identifiers.validate(column));
     }
 
     @Override
     public WhereStep and(String column) {
         return where(column);
+    }
+
+    private ConditionReady finish(String condition) {
+        String joined = conditions == null ? condition : conditions + " AND " + condition;
+        return keep(table, joined, null);
     }
 
     @Override
@@ -142,9 +180,27 @@ final class Query implements SelectStep, FromStep, WhereStep, ConditionReady {
                 + " AND " + Values.literal(high));
     }
 
-    private ConditionReady finish(String condition) {
-        String joined = conditions == null ? condition : conditions + " AND " + condition;
-        return copy(table, joined, null);
+    @Override
+    public OrderReady orderBy(String column, Order order) {
+        String key = Identifiers.validate(column) + " " + order;
+        String joined = ordering == null ? key : ordering + ", " + key;
+        return new Query(connection, projection, table, conditions, null, joined, limit, offset);
+    }
+
+    @Override
+    public LimitReady limit(int n) {
+        if (n < 0) {
+            throw new IllegalArgumentException("LIMIT must be non-negative");
+        }
+        return new Query(connection, projection, table, conditions, null, ordering, n, offset);
+    }
+
+    @Override
+    public OffsetReady offset(int n) {
+        if (n < 0) {
+            throw new IllegalArgumentException("OFFSET must be non-negative");
+        }
+        return new Query(connection, projection, table, conditions, null, ordering, limit, n);
     }
 
     @Override
@@ -152,11 +208,20 @@ final class Query implements SelectStep, FromStep, WhereStep, ConditionReady {
         if (pendingColumn != null) {
             throw new IllegalStateException("WHERE has a column but no condition");
         }
-        String sql = "SELECT " + projection + " FROM " + table;
+        StringBuilder sql = new StringBuilder("SELECT ").append(projection).append(" FROM ").append(table);
         if (conditions != null) {
-            sql += " WHERE " + conditions;
+            sql.append(" WHERE ").append(conditions);
         }
-        return sql;
+        if (ordering != null) {
+            sql.append(" ORDER BY ").append(ordering);
+        }
+        if (limit != null) {
+            sql.append(" LIMIT ").append(limit);
+            if (offset != null) {
+                sql.append(" OFFSET ").append(offset);
+            }
+        }
+        return sql.toString();
     }
 
     @Override

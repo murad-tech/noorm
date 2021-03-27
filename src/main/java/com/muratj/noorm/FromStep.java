@@ -14,4 +14,8 @@ public interface FromStep {
      * {@code and(column)}.
      * @throws IllegalArgumentException when the column name is not a safe identifier */
     WhereStep where(String column);
+
+    /** Adds an ORDER BY key; repeatable via {@link OrderReady#orderBy}.
+     * @throws IllegalArgumentException when the column name is not a safe identifier */
+    OrderReady orderBy(String column, Order order);
 }
