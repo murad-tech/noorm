@@ -20,9 +20,11 @@ final class Query implements SelectStep, FromStep, WhereStep, ConditionReady,
     private final String ordering;
     private final Integer limit;
     private final Integer offset;
+    private final boolean distinct;
 
     private Query(Connection connection,
                   String projection,
+                  boolean distinct,
                   String table,
                   String conditions,
                   String pendingColumn,
@@ -30,18 +32,22 @@ final class Query implements SelectStep, FromStep, WhereStep, ConditionReady,
                   Integer limit,
                   Integer offset) {
         this.connection = connection;               // SQL connection
-        this.projection = projection;               // list of columns or "*"
+        this.projection = projection;               // list of columns, COUNT(x), "x, y" or null ("*")
         this.table = table;
         this.conditions = conditions;
-        this.pendingColumn = pendingColumn;
+        this.pendingColumn = pendingColumn;         // helps to handle AND operator
         this.ordering = ordering;
         this.limit = limit;
         this.offset = offset;
+        this.distinct = distinct;
     }
 
-    static Query withColumns(String projection, Connection connection) {
+    static Query withColumns(String projection,
+                             boolean distinct,
+                             Connection connection) {
         return new Query(connection,
                 projection,
+                distinct,
                 null,
                 null,
                 null,
@@ -53,6 +59,7 @@ final class Query implements SelectStep, FromStep, WhereStep, ConditionReady,
     private Query keep(String table, String conditions, String pendingColumn) {
         return new Query(connection,
                 projection,
+                distinct,
                 table,
                 conditions,
                 pendingColumn,
@@ -78,6 +85,34 @@ final class Query implements SelectStep, FromStep, WhereStep, ConditionReady,
     @Override
     public WhereStep and(String column) {
         return where(column);
+    }
+
+    @Override
+    public SelectStep count(String column) {
+        return chooseCount("COUNT(" + Identifiers.validate(column) + ")");
+    }
+
+    @Override
+    public SelectStep countAll() {
+        return chooseCount("COUNT(*)");
+    }
+
+    private SelectStep chooseCount(String projection) {
+        if (distinct) {
+            throw new IllegalStateException("count() does not combine with DISTINCT");
+        }
+        if (this.projection != null) {
+            throw new IllegalStateException("Column projection already chosen; call count() on an empty select()");
+        }
+        return new Query(connection,
+                projection,
+                distinct,
+                table,
+                conditions,
+                pendingColumn,
+                ordering,
+                limit,
+                offset);
     }
 
     private ConditionReady finish(String condition) {
@@ -184,7 +219,7 @@ final class Query implements SelectStep, FromStep, WhereStep, ConditionReady,
     public OrderReady orderBy(String column, Order order) {
         String key = Identifiers.validate(column) + " " + order;
         String joined = ordering == null ? key : ordering + ", " + key;
-        return new Query(connection, projection, table, conditions, null, joined, limit, offset);
+        return new Query(connection, projection, distinct, table, conditions, null, joined, limit, offset);
     }
 
     @Override
@@ -192,7 +227,7 @@ final class Query implements SelectStep, FromStep, WhereStep, ConditionReady,
         if (n < 0) {
             throw new IllegalArgumentException("LIMIT must be non-negative");
         }
-        return new Query(connection, projection, table, conditions, null, ordering, n, offset);
+        return new Query(connection, projection, distinct, table, conditions, null, ordering, n, offset);
     }
 
     @Override
@@ -200,7 +235,7 @@ final class Query implements SelectStep, FromStep, WhereStep, ConditionReady,
         if (n < 0) {
             throw new IllegalArgumentException("OFFSET must be non-negative");
         }
-        return new Query(connection, projection, table, conditions, null, ordering, limit, n);
+        return new Query(connection, projection, distinct, table, conditions, null, ordering, limit, n);
     }
 
     @Override
@@ -208,7 +243,12 @@ final class Query implements SelectStep, FromStep, WhereStep, ConditionReady,
         if (pendingColumn != null) {
             throw new IllegalStateException("WHERE has a column but no condition");
         }
-        StringBuilder sql = new StringBuilder("SELECT ").append(projection).append(" FROM ").append(table);
+        String projection_ = projection == null ? "*" : projection;
+        StringBuilder sql = new StringBuilder("SELECT ");
+        if (distinct) {
+            sql.append("DISTINCT ");
+        }
+        sql.append(projection_).append(" FROM ").append(table);
         if (conditions != null) {
             sql.append(" WHERE ").append(conditions);
         }
