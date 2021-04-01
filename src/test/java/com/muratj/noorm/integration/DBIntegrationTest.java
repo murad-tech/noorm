@@ -14,7 +14,7 @@ import com.muratj.noorm.DB;
 
 /** A query built through noorm runs against a real H2 database via its own connection. */
 @Tag("integration")
-class SqlIntegrationTest {
+class DBIntegrationTest {
 
     private static final String URL = "jdbc:h2:mem:noorm-it;DB_CLOSE_DELAY=-1";
 

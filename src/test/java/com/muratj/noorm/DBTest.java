@@ -48,4 +48,16 @@ class DBTest {
     void rejectsHostileTableIdentifier() {
         assertThrows(IllegalArgumentException.class, () -> db.select("*").from("users; DROP TABLE users"));
     }
+
+    @Test
+    void rejectsHostileSelectColumn() {
+        assertThrows(IllegalArgumentException.class, () -> db.select("name; --"));
+        assertThrows(IllegalArgumentException.class, () -> db.selectDistinct("age; DROP"));
+    }
+
+    @Test
+    void acceptsQualifiedColumns() {
+        String sql = db.select("users.name", "users.age").from("users").build();
+        assertEquals("SELECT users.name, users.age FROM users", sql);
+    }
 }

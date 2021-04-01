@@ -5,9 +5,13 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.regex.Pattern;
 
 /** Immutable CREATE TABLE state; columns join until the statement is forced. */
 final class TableQuery implements CreateTableStep, ColumnStep {
+
+    /** letters, digits, underscore, blank, comma, parens — no dash, so no "--"; no quotes. */
+    private static final Pattern TYPE_FRAGMENT = Pattern.compile("[A-Za-z][A-Za-z0-9_ (),]*");
 
     private final Connection connection;
     private final String table;
@@ -31,7 +35,16 @@ final class TableQuery implements CreateTableStep, ColumnStep {
 
     @Override
     public ColumnStep column(String name, String type) {
-        return withColumn(Identifiers.validate(name) + " " + type);
+        return withColumn(Identifiers.validate(name) + " " + validateType(type));
+    }
+
+    /** Column types are developer-supplied config, still passed through an
+     * allowlist instead of into SQL verbatim. */
+    private static String validateType(String type) {
+        if (type == null || !TYPE_FRAGMENT.matcher(type).matches()) {
+            throw new IllegalArgumentException("Not a safe SQL type fragment: '" + type + "'");
+        }
+        return type;
     }
 
     @Override

@@ -103,6 +103,12 @@ class WhereTest {
     }
 
     @Test
+    void referenceChainFromTheSpec() {
+        String sql = db.select("*").from("users").where("name").like("john").build();
+        assertEquals("SELECT * FROM users WHERE name LIKE 'john'", sql);
+    }
+
+    @Test
     void likeEscapesQuote() {
         assertEquals("SELECT * FROM users WHERE name LIKE 'jo%'",
                 db.select("*").from("users").where("name").like("jo%").build());

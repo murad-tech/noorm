@@ -30,12 +30,23 @@ public final class DB implements AutoCloseable {
 
     /** Starts a SELECT; an empty column list defaults to all columns ({@code *}). */
     public SelectStep select(String... columns) {
-        return Query.withColumns(columns.length == 0 ? null : String.join(", ", columns), false, connection);
+        return Query.withColumns(joinColumns(columns), false, connection);
     }
 
     /** Starts a SELECT DISTINCT; an empty column list defaults to all columns ({@code *}). */
     public SelectStep selectDistinct(String... columns) {
-        return Query.withColumns(columns.length == 0 ? null : String.join(", ", columns), true, connection);
+        return Query.withColumns(joinColumns(columns), true, connection);
+    }
+
+    private static String joinColumns(String... columns) {
+        if (columns.length == 0) {
+            return null;
+        }
+        String[] safe = new String[columns.length];
+        for (int i = 0; i < columns.length; i++) {
+            safe[i] = Identifiers.validate(columns[i]);
+        }
+        return String.join(", ", safe);
     }
 
     /** Starts a CREATE TABLE against the connection; add columns via the step chain.

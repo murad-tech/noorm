@@ -41,24 +41,46 @@ class CreateTableTest {
 
     @Test
     void singleColumnHasNoSeparator() {
-        String sql = db.createTable("users").column("id", "INTEGER").build();
+        String sql = db.createTable("users")
+                .column("id", "INTEGER")
+                .build();
         assertEquals("CREATE TABLE users (id INTEGER)", sql);
     }
 
     @Test
     void hostileTableNameRejected() {
-        assertThrows(IllegalArgumentException.class, () -> db.createTable("users; DROP TABLE users"));
+        assertThrows(IllegalArgumentException.class,
+                () -> db.createTable("users; DROP TABLE users"));
     }
 
     @Test
     void hostileColumnNameRejected() {
-        assertThrows(IllegalArgumentException.class, () -> db.createTable("users").column("name; --", "VARCHAR(50)"));
+        assertThrows(IllegalArgumentException.class,
+                () -> db.createTable("users").column("name; --", "VARCHAR(50)"));
+    }
+
+    @Test
+    void hostileTypeFragmentRejected() {
+        assertThrows(IllegalArgumentException.class,
+                () -> db.createTable("users").column("name", "VARCHAR(50); DROP TABLE users"));
+        assertThrows(IllegalArgumentException.class,
+                () -> db.createTable("users").column("name", "-- comment"));
+    }
+
+    @Test
+    void typeFragmentWithArgumentsAccepted() {
+        String sql = db.createTable("users")
+                .column("amount", "DECIMAL(10, 2)")
+                .column("note", "VARCHAR(255)")
+                .build();
+        assertEquals("CREATE TABLE users (amount DECIMAL(10, 2), note VARCHAR(255))", sql);
     }
 
     @Test
     void zeroColumnsCannotBuild() {
         // CreateTableStep does not expose build(); guard holds for misuse
-        assertThrows(IllegalStateException.class, () -> ((TableQuery) db.createTable("users")).build());
+        assertThrows(IllegalStateException.class,
+                () -> ((TableQuery) db.createTable("users")).build());
     }
 
     @Test
