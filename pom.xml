@@ -9,7 +9,6 @@
   <packaging>jar</packaging>
 
   <name>noorm</name>
-  <url>http://maven.apache.org</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -17,7 +16,6 @@
   </properties>
 
   <dependencies>
-    <!-- Project constraint: all dependency versions predate March 2021 -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>

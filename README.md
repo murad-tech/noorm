@@ -106,3 +106,13 @@ try (DB db = DB.connect("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1", "sa", "")) {
 - INSERT
 
 On the list: ALTER and DROP table, OR groupings, typed row-mapping layer, GROUP BY + HAVING, DELETE and UPDATE record.
+
+## Development
+
+After cloning, run the one-line setup to enable the pre-commit hook that runs
+unit tests on every commit:
+
+```bash
+./setup.sh
+```
+
